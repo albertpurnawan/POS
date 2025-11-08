@@ -1,4 +1,4 @@
-POS-bolt
+POS
 
 Backend setup
 - Node.js Express backend in `backend/`
@@ -27,12 +27,10 @@ services:
     restart: unless-stopped
 ```
 
-Integrating frontend
-- Update frontend hooks to call backend APIs when ready
+Frontend integration
+- Hook frontend to backend APIs
 - Auth: POST `/api/auth/login` returns `{ user, token }`
 - Products: CRUD at `/api/products`
 - Orders: create at `/api/orders`
-
-# POS
 
 # POS
