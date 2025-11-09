@@ -33,7 +33,7 @@ usage() {
   sed -n '1,40p' "$0" | sed 's/^# //'
 }
 
-while [[ $# -gt 0 ]]; then
+while [[ $# -gt 0 ]]; do
   case "$1" in
     --image) IMAGE_NAME="$2"; shift 2;;
     --tag) IMAGE_TAG="$2"; shift 2;;
@@ -109,4 +109,3 @@ fi
 
 validate
 write_env
-
