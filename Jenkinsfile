@@ -2,7 +2,7 @@ pipeline {
   agent any
 
   environment {
-    IMAGE_NAME = 'your-dockerhub-username/pos-bolt'
+    IMAGE_NAME = 'your-dockerhub-username/pos'
     IMAGE_TAG = "${env.BUILD_NUMBER}"
     DOCKER_CREDS = 'dockerhub-credentials'
 
@@ -10,8 +10,9 @@ pipeline {
     DEPLOY_HOST = 'your-server.example.com'
     DEPLOY_USER = 'ubuntu'
     DEPLOY_SSH_CREDENTIALS = 'deploy-ssh-key'
-    DEPLOY_APP_NAME = 'pos-bolt'
-    DEPLOY_PORT = '8080'
+    DEPLOY_APP_NAME = 'pos'
+    DEPLOY_PORT = '33000'
+    DEPLOY_CONTAINER_PORT = '80'
   }
 
   options {
@@ -73,13 +74,13 @@ pipeline {
             sh '''
               set -e
               # Copy deploy script to server
-              scp -o StrictHostKeyChecking=no scripts/deploy.sh ${DEPLOY_USER}@${DEPLOY_HOST}:/tmp/deploy-pos-bolt.sh
+              scp -o StrictHostKeyChecking=no scripts/deploy.sh ${DEPLOY_USER}@${DEPLOY_HOST}:/tmp/deploy-pos.sh
               # Execute deploy script with required env vars
               ssh -o StrictHostKeyChecking=no ${DEPLOY_USER}@${DEPLOY_HOST} \
-                "chmod +x /tmp/deploy-pos-bolt.sh && \
-                 IMAGE_NAME=${IMAGE_NAME} IMAGE_TAG=${IMAGE_TAG} CONTAINER_NAME=${DEPLOY_APP_NAME} PORT=${DEPLOY_PORT} \
+                "chmod +x /tmp/deploy-pos.sh && \
+                 IMAGE_NAME=${IMAGE_NAME} IMAGE_TAG=${IMAGE_TAG} CONTAINER_NAME=${DEPLOY_APP_NAME} PORT=${DEPLOY_PORT} CONTAINER_PORT=${DEPLOY_CONTAINER_PORT} \
                  DOCKER_USER=\"$DOCKER_USER\" DOCKER_PASS=\"$DOCKER_PASS\" \
-                 /tmp/deploy-pos-bolt.sh"
+                 /tmp/deploy-pos.sh"
             '''
           }
         }
@@ -99,4 +100,3 @@ pipeline {
     }
   }
 }
-
