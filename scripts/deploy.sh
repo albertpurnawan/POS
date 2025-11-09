@@ -26,11 +26,20 @@ require_var() {
 
 # Auto-load env file if present (same directory as this script)
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-if [[ -f "$SCRIPT_DIR/deploy.env" ]]; then
-  log "Loading env from $SCRIPT_DIR/deploy.env"
+# Load env from precedence: DEPLOY_ENV_FILE > .env > deploy.env (in script dir)
+ENV_FILE_CANDIDATE="${DEPLOY_ENV_FILE:-}"
+if [[ -z "$ENV_FILE_CANDIDATE" ]]; then
+  if [[ -f "$SCRIPT_DIR/.env" ]]; then
+    ENV_FILE_CANDIDATE="$SCRIPT_DIR/.env"
+  elif [[ -f "$SCRIPT_DIR/deploy.env" ]]; then
+    ENV_FILE_CANDIDATE="$SCRIPT_DIR/deploy.env"
+  fi
+fi
+if [[ -n "${ENV_FILE_CANDIDATE:-}" && -f "$ENV_FILE_CANDIDATE" ]]; then
+  log "Loading env from $ENV_FILE_CANDIDATE"
   set +u
   # shellcheck disable=SC1091
-  . "$SCRIPT_DIR/deploy.env"
+  . "$ENV_FILE_CANDIDATE"
   set -u
 fi
 
