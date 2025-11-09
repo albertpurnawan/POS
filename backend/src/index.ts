@@ -2,11 +2,11 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 
-import { router as authRouter } from './routes/auth.js';
-import { router as productsRouter } from './routes/products.js';
-import { router as ordersRouter } from './routes/orders.js';
-import { router as tablesRouter } from './routes/tables.js';
-import { router as outletsRouter } from './routes/outlets.js';
+import { router as authRouter } from './routes/auth';
+import { router as productsRouter } from './routes/products';
+import { router as ordersRouter } from './routes/orders';
+import { router as tablesRouter } from './routes/tables';
+import { router as outletsRouter } from './routes/outlets';
 
 const app = express();
 
@@ -28,4 +28,3 @@ app.listen(PORT, () => {
   // eslint-disable-next-line no-console
   console.log(`Backend listening on http://localhost:${PORT}`);
 });
-

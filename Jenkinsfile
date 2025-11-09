@@ -2,15 +2,15 @@ pipeline {
   agent any
 
   environment {
-    REGISTRY = credentials('dockerhub-credentials')
-    IMAGE_NAME = 'your-dockerhub-username/pos'
+    IMAGE_NAME = 'your-dockerhub-username/pos-bolt'
     IMAGE_TAG = "${env.BUILD_NUMBER}"
+    DOCKER_CREDS = 'dockerhub-credentials'
 
     // Deployment parameters (fill these in Jenkins or edit here)
     DEPLOY_HOST = 'your-server.example.com'
     DEPLOY_USER = 'ubuntu'
     DEPLOY_SSH_CREDENTIALS = 'deploy-ssh-key'
-    DEPLOY_APP_NAME = 'pos-app'
+    DEPLOY_APP_NAME = 'pos-bolt'
     DEPLOY_PORT = '8080'
   }
 
@@ -57,7 +57,7 @@ pipeline {
 
     stage('Docker Login & Push') {
       steps {
-        withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+        withCredentials([usernamePassword(credentialsId: env.DOCKER_CREDS, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
           sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
           sh 'docker push ${IMAGE_NAME}:${IMAGE_TAG}'
           sh 'docker push ${IMAGE_NAME}:latest'
@@ -69,14 +69,17 @@ pipeline {
       when { branch 'main' }
       steps {
         sshagent(credentials: [env.DEPLOY_SSH_CREDENTIALS]) {
-          withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+          withCredentials([usernamePassword(credentialsId: env.DOCKER_CREDS, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
             sh '''
               set -e
+              # Copy deploy script to server
+              scp -o StrictHostKeyChecking=no scripts/deploy.sh ${DEPLOY_USER}@${DEPLOY_HOST}:/tmp/deploy-pos-bolt.sh
+              # Execute deploy script with required env vars
               ssh -o StrictHostKeyChecking=no ${DEPLOY_USER}@${DEPLOY_HOST} \
-                "echo \"$DOCKER_PASS\" | docker login -u \"$DOCKER_USER\" --password-stdin && \
-                 docker pull ${IMAGE_NAME}:${IMAGE_TAG} && \
-                 docker container rm -f ${DEPLOY_APP_NAME} || true && \
-                 docker run -d --restart unless-stopped --name ${DEPLOY_APP_NAME} -p ${DEPLOY_PORT}:80 ${IMAGE_NAME}:${IMAGE_TAG}"
+                "chmod +x /tmp/deploy-pos-bolt.sh && \
+                 IMAGE_NAME=${IMAGE_NAME} IMAGE_TAG=${IMAGE_TAG} CONTAINER_NAME=${DEPLOY_APP_NAME} PORT=${DEPLOY_PORT} \
+                 DOCKER_USER=\"$DOCKER_USER\" DOCKER_PASS=\"$DOCKER_PASS\" \
+                 /tmp/deploy-pos-bolt.sh"
             '''
           }
         }
@@ -86,13 +89,14 @@ pipeline {
 
   post {
     success {
-      echo 'Build and push succeeded.'
+      echo 'Build/Push/Deploy succeeded.'
     }
     failure {
-      echo 'Build or push failed.'
+      echo 'Pipeline failed.'
     }
     always {
       cleanWs()
     }
   }
 }
+

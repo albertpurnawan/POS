@@ -1,0 +1,21 @@
+services:
+  frontend:
+    build: .
+    image: pos-bolt-frontend:local
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+  backend:
+    build: ./backend
+    image: pos-bolt-backend:local
+    environment:
+      - PORT=4000
+      - JWT_SECRET=change-me
+    ports:
+      - "4000:4000"
+    restart: unless-stopped
+
+networks:
+  default:
+    name: pos-bolt

@@ -1,0 +1,20 @@
+services:
+  frontend:
+    build: .
+    image: ${REGISTRY:-your-dockerhub-username}/pos-frontend:${TAG:-latest}
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+  backend:
+    build: ./backend
+    image: ${REGISTRY:-your-dockerhub-username}/pos-backend:${TAG:-latest}
+    environment:
+      - PORT=4000
+      - JWT_SECRET=${JWT_SECRET:-change-me}
+    expose:
+      - "4000"
+    restart: unless-stopped
+networks:
+  default:
+    name: pos-bolt

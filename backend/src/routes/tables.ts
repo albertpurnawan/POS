@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { tables } from '../data/mock.js';
+import { tables } from '../data/mock';
 
 const router = Router();
 
@@ -8,4 +8,3 @@ router.get('/', (_req, res) => {
 });
 
 export { router };
-

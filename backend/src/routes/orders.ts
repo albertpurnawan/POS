@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { orders } from '../data/mock.js';
+import { orders } from '../data/mock';
 
 const router = Router();
 
@@ -54,4 +54,3 @@ router.delete('/:id', (req, res) => {
 });
 
 export { router };
-
