@@ -9,6 +9,8 @@ COPY package*.json ./
 RUN npm ci --no-audit --no-fund
 
 # Copy rest of the source and build
+ARG VITE_API_URL
+ENV VITE_API_URL=${VITE_API_URL}
 COPY . .
 RUN npm run build
 
@@ -27,4 +29,3 @@ EXPOSE 80
 HEALTHCHECK --interval=30s --timeout=3s CMD wget -qO- http://localhost/ || exit 1
 
 # Default command provided by nginx image
-

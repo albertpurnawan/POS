@@ -13,6 +13,10 @@ set -euo pipefail
 #   DOCKER_PASS      - for docker login
 #   RUN_ARGS         - extra args for `docker run` (e.g. "-e FOO=bar")
 #   BIND_ADDR        - host bind address, default 0.0.0.0
+# Build behavior (when no registry publish):
+#   FORCE_BUILD=1    - always build locally (skip docker pull)
+#   FALLBACK_BUILD=1 - build locally if docker pull fails
+#   BUILD_CONTEXT    - path to Dockerfile (default: project root above scripts)
 
 log() { echo "[deploy] $*"; }
 
@@ -78,8 +82,29 @@ else
   log "Skipping docker login (DOCKER_USER/PASS not provided)"
 fi
 
-log "Pulling image ${IMAGE_NAME}:${IMAGE_TAG}"
-docker pull "${IMAGE_NAME}:${IMAGE_TAG}"
+# Default build context: project root above scripts directory
+BUILD_CONTEXT="${BUILD_CONTEXT:-$(dirname "$SCRIPT_DIR")}" 
+
+if [[ "${FORCE_BUILD:-0}" == "1" ]]; then
+  log "FORCE_BUILD=1 set. Building locally from $BUILD_CONTEXT"
+  docker build -t "${IMAGE_NAME}:${IMAGE_TAG}" "$BUILD_CONTEXT"
+else
+  log "Pulling image ${IMAGE_NAME}:${IMAGE_TAG}"
+  set +e
+  docker pull "${IMAGE_NAME}:${IMAGE_TAG}"
+  PULL_RC=$?
+  set -e
+
+  if [[ "$PULL_RC" -ne 0 ]]; then
+    if [[ "${FALLBACK_BUILD:-0}" == "1" ]]; then
+      log "Pull failed. Building locally from $BUILD_CONTEXT"
+      docker build -t "${IMAGE_NAME}:${IMAGE_TAG}" "$BUILD_CONTEXT"
+    else
+      echo "Failed to pull ${IMAGE_NAME}:${IMAGE_TAG}. Set FORCE_BUILD=1 or FALLBACK_BUILD=1 to build locally, or ensure the image exists and credentials are correct." >&2
+      exit "$PULL_RC"
+    fi
+  fi
+fi
 
 if docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
   log "Removing existing container ${CONTAINER_NAME}"

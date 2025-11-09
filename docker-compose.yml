@@ -1,21 +1,33 @@
+# Compose for POS-bolt: frontend (Vite+Nginx) and optional backend
 services:
   frontend:
-    build: .
-    image: pos-frontend:local
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        # Optional build-time Vite envs (only if defined)
+        VITE_API_URL: ${VITE_API_URL:-}
+    image: ${FRONTEND_IMAGE:-pos-frontend}
+    container_name: ${FRONTEND_NAME:-pos-frontend}
     ports:
-      - "8080:80"
-    depends_on:
-      - backend
-  backend:
-    build: ./backend
-    image: pos-backend:local
-    environment:
-      - PORT=4000
-      - JWT_SECRET=change-me
-    ports:
-      - "4000:4000"
+      - "${FRONTEND_PORT:-33000}:80"
     restart: unless-stopped
+    networks:
+      - app
+
+  backend:
+    profiles: ["backend"]
+    build:
+      context: ./backend
+      dockerfile: ${BACKEND_DOCKERFILE:-Dockerfile}
+    image: ${BACKEND_IMAGE:-your-dockerhub-username/pos-backend}
+    container_name: ${BACKEND_NAME:-pos-backend}
+    ports:
+      - "${BACKEND_PORT:-4000}:4000"
+    restart: unless-stopped
+    networks:
+      - app
 
 networks:
-  default:
-    name: pos
+  app:
+    driver: bridge
