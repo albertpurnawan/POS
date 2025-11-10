@@ -34,7 +34,6 @@ services:
       PORT: 4000
       NODE_ENV: production
       JWT_SECRET: ${JWT_SECRET:-change-me}
-      DATABASE_URL: ${DATABASE_URL:-postgresql://${POSTGRES_USER:-pos}:${POSTGRES_PASSWORD:-pospass}@db:5432/${POSTGRES_DB:-pos}}
     networks:
       - app
     depends_on:
