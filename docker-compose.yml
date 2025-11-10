@@ -1,4 +1,3 @@
-# Compose for POS-bolt: frontend (Vite+Nginx) and optional backend
 services:
   frontend:
     build:
@@ -25,9 +24,45 @@ services:
     ports:
       - "${BACKEND_PORT:-4000}:4000"
     restart: unless-stopped
+    environment:
+      # Database connection (override as needed to match your backend)
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: ${POSTGRES_DB:-pos}
+      DB_USER: ${POSTGRES_USER:-pos}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-pospass}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://${POSTGRES_USER:-pos}:${POSTGRES_PASSWORD:-pospass}@db:5432/${POSTGRES_DB:-pos}}
+      PORT: 4000
+      NODE_ENV: production
+      JWT_SECRET: ${JWT_SECRET:-change-me}
+    networks:
+      - app
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    profiles: ["backend"]
+    image: postgres:15-alpine
+    container_name: ${DB_CONTAINER_NAME:-pos-db}
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-pos}
+      POSTGRES_USER: ${POSTGRES_USER:-pos}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pospass}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-pos} -d ${POSTGRES_DB:-pos}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    ports:
+      - "${DB_HOST_PORT:-55432}:5432"
     networks:
       - app
 
 networks:
   app:
     driver: bridge
+volumes:
+  db_data:
