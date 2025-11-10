@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { apiPost } from '../lib/api';
 import { User } from '../types';
 
 export const useAuth = () => {
@@ -7,21 +8,18 @@ export const useAuth = () => {
 
   const login = async (email: string, password: string) => {
     setIsLoading(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Mock user data
-    const mockUser: User = {
-      id: '1',
-      name: 'John Doe',
-      email: email,
-      role: 'cashier',
-      avatar: 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=100'
-    };
-    
-    setUser(mockUser);
-    setIsLoading(false);
-    return true;
+    try {
+      const res = await apiPost<{ user: User; token: string }>(
+        '/auth/login',
+        { email, password }
+      );
+      setUser(res.user);
+      return true;
+    } catch (e) {
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const logout = () => {

@@ -10,6 +10,7 @@ import { Products } from './components/Pages/Products';
 import { Analytics } from './components/Pages/Analytics';
 import { Tables } from './components/Pages/Tables';
 import { Settings } from './components/Pages/Settings';
+import { Orders } from './components/Pages/Orders';
 
 function App() {
   const { user, isLoading, login, logout, isAuthenticated } = useAuth();
@@ -57,10 +58,19 @@ function App() {
             onRemoveFromOrder={posData.removeFromOrder}
             onClearOrder={posData.clearOrder}
             getOrderTotal={posData.getOrderTotal}
+            checkout={posData.checkout}
+            completeOrder={posData.completeOrder}
           />
         );
       case 'products':
-        return <Products products={posData.products} />;
+        return (
+          <Products 
+            products={posData.products}
+            onCreateProduct={posData.createProduct}
+            onUpdateProduct={posData.updateProduct}
+            onDeleteProduct={posData.deleteProduct}
+          />
+        );
       case 'analytics':
         return (
           <Analytics 
@@ -68,10 +78,33 @@ function App() {
             paymentMethods={posData.paymentMethods}
           />
         );
+      case 'orders':
+        return (
+          <Orders 
+            orders={posData.orders}
+            onRefresh={posData.loadOrders}
+            onComplete={posData.completeOrder}
+            onDelete={posData.deleteOrder}
+          />
+        );
       case 'tables':
-        return <Tables tables={posData.tables} />;
+        return (
+          <Tables 
+            tables={posData.tables}
+            onCreateTable={posData.createTable}
+            onUpdateTable={posData.updateTable}
+            onDeleteTable={posData.deleteTable}
+          />
+        );
       case 'settings':
-        return <Settings />;
+        return (
+          <Settings 
+            outlets={posData.outlets}
+            onCreateOutlet={posData.createOutlet}
+            onUpdateOutlet={posData.updateOutlet}
+            onDeleteOutlet={posData.deleteOutlet}
+          />
+        );
       default:
         return (
           <Dashboard 

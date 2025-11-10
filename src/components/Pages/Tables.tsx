@@ -4,11 +4,19 @@ import { Table } from '../../types';
 
 interface TablesProps {
   tables: Table[];
+  onCreateTable?: (p: { number: number; seats: number; status: 'empty'|'booked'|'active' }) => Promise<Table>;
+  onUpdateTable?: (id: string, patch: Partial<Table>) => Promise<Table>;
+  onDeleteTable?: (id: string) => Promise<void>;
 }
 
-export const Tables: React.FC<TablesProps> = ({ tables }) => {
+export const Tables: React.FC<TablesProps> = ({ tables, onCreateTable, onUpdateTable, onDeleteTable }) => {
   const [selectedTable, setSelectedTable] = useState<Table | null>(null);
   const [showAssignModal, setShowAssignModal] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [number, setNumber] = useState<number>(0);
+  const [seats, setSeats] = useState<number>(2);
+  const [status, setStatus] = useState<'empty'|'booked'|'active'>('empty');
+  const [saving, setSaving] = useState(false);
 
   const getTableStatusColor = (status: Table['status']) => {
     switch (status) {
@@ -64,7 +72,7 @@ export const Tables: React.FC<TablesProps> = ({ tables }) => {
           <h1 className="text-2xl font-bold text-gray-900">Manajemen Meja</h1>
           <p className="text-gray-600">Kelola status dan reservasi meja</p>
         </div>
-        <button className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 flex items-center space-x-2">
+        <button onClick={() => setShowCreateModal(true)} className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 flex items-center space-x-2">
           <Plus className="h-5 w-5" />
           <span>Tambah Meja</span>
         </button>
@@ -206,12 +214,30 @@ export const Tables: React.FC<TablesProps> = ({ tables }) => {
                   <p className="text-sm text-gray-600 mb-2">Order ID: #12345</p>
                   <p className="font-medium">2x Cappuccino, 1x Croissant</p>
                   <p className="text-sm text-gray-600 mt-2">Dimulai: 14:30</p>
-                  <div className="flex space-x-2 mt-4">
-                    <button className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700">
-                      Selesai
+                <div className="flex space-x-2 mt-4">
+                    <button onClick={async () => {
+                      if (!selectedTable || !onUpdateTable) return;
+                      setSaving(true);
+                      try {
+                        await onUpdateTable(selectedTable.id, { status: selectedTable.status === 'active' ? 'empty' : 'active' });
+                      } finally {
+                        setSaving(false);
+                      }
+                    }} className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700">
+                      Toggle Aktif
                     </button>
-                    <button className="bg-indigo-600 text-white px-3 py-1 rounded text-sm hover:bg-indigo-700">
-                      Lihat Detail
+                    <button onClick={async () => {
+                      if (!selectedTable || !onDeleteTable) return;
+                      if (!confirm(`Hapus meja ${selectedTable.number}?`)) return;
+                      setSaving(true);
+                      try {
+                        await onDeleteTable(selectedTable.id);
+                        setSelectedTable(null);
+                      } finally {
+                        setSaving(false);
+                      }
+                    }} className="bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700">
+                      Hapus Meja
                     </button>
                   </div>
                 </div>
@@ -289,6 +315,50 @@ export const Tables: React.FC<TablesProps> = ({ tables }) => {
                 Assign Pesanan
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create Table Modal */}
+      {showCreateModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-md w-full p-6">
+            <h3 className="text-xl font-bold text-gray-900 mb-4">Tambah Meja</h3>
+            <form className="space-y-4" onSubmit={async (e) => {
+              e.preventDefault();
+              if (!onCreateTable) return;
+              setSaving(true);
+              try {
+                await onCreateTable({ number, seats, status });
+                setShowCreateModal(false);
+                setNumber(0);
+                setSeats(2);
+                setStatus('empty');
+              } finally {
+                setSaving(false);
+              }
+            }}>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Nomor</label>
+                <input type="number" value={number} onChange={(e) => setNumber(Number(e.target.value))} className="w-full px-4 py-2 border border-gray-300 rounded-lg" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Kursi</label>
+                <input type="number" value={seats} onChange={(e) => setSeats(Number(e.target.value))} className="w-full px-4 py-2 border border-gray-300 rounded-lg" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                <select value={status} onChange={(e) => setStatus(e.target.value as any)} className="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                  <option value="empty">Kosong</option>
+                  <option value="booked">Dipesan</option>
+                  <option value="active">Aktif</option>
+                </select>
+              </div>
+              <div className="flex justify-end space-x-2">
+                <button type="button" onClick={() => setShowCreateModal(false)} className="px-4 py-2 rounded-lg border border-gray-300">Batal</button>
+                <button type="submit" disabled={saving} className="px-4 py-2 rounded-lg bg-indigo-600 text-white disabled:bg-gray-300">{saving ? 'Menyimpan...' : 'Simpan'}</button>
+              </div>
+            </form>
           </div>
         </div>
       )}

@@ -23,6 +23,7 @@ const menuItems = [
   { id: 'cashier', label: 'Kasir', icon: ShoppingCart },
   { id: 'products', label: 'Produk', icon: Package },
   { id: 'analytics', label: 'Laporan', icon: BarChart3 },
+  { id: 'orders', label: 'Pesanan', icon: Users },
   { id: 'tables', label: 'Meja', icon: Coffee },
   { id: 'settings', label: 'Pengaturan', icon: Settings }
 ];

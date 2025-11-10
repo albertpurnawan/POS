@@ -1,5 +1,7 @@
-import { useState } from 'react';
-import { Product, OrderItem, Order, Table, Outlet, SalesData, PaymentMethod } from '../types';
+import { useEffect, useState } from 'react';
+import { Product, OrderItem, Order, Table, Outlet, SalesData, PaymentMethod, OrderSummary } from '../types';
+import { apiGet, apiPost } from '../lib/api';
+import { apiPut, apiDelete } from '../lib/api';
 
 export const usePOS = () => {
   const [currentOutlet, setCurrentOutlet] = useState<Outlet>({
@@ -8,89 +10,17 @@ export const usePOS = () => {
     status: 'open'
   });
 
-  const [products] = useState<Product[]>([
-    {
-      id: '1',
-      name: 'Cappuccino',
-      category: 'Coffee',
-      price: 35000,
-      stock: 50,
-      image: 'https://images.pexels.com/photos/302899/pexels-photo-302899.jpeg?auto=compress&cs=tinysrgb&w=300',
-      status: 'active'
-    },
-    {
-      id: '2',
-      name: 'Americano',
-      category: 'Coffee',
-      price: 25000,
-      stock: 30,
-      image: 'https://images.pexels.com/photos/324028/pexels-photo-324028.jpeg?auto=compress&cs=tinysrgb&w=300',
-      status: 'active'
-    },
-    {
-      id: '3',
-      name: 'Latte',
-      category: 'Coffee',
-      price: 40000,
-      stock: 25,
-      image: 'https://images.pexels.com/photos/312418/pexels-photo-312418.jpeg?auto=compress&cs=tinysrgb&w=300',
-      status: 'active'
-    },
-    {
-      id: '4',
-      name: 'Croissant',
-      category: 'Food',
-      price: 20000,
-      stock: 15,
-      image: 'https://images.pexels.com/photos/2135677/pexels-photo-2135677.jpeg?auto=compress&cs=tinysrgb&w=300',
-      status: 'active'
-    },
-    {
-      id: '5',
-      name: 'Cheesecake',
-      category: 'Dessert',
-      price: 45000,
-      stock: 8,
-      image: 'https://images.pexels.com/photos/140831/pexels-photo-140831.jpeg?auto=compress&cs=tinysrgb&w=300',
-      status: 'active'
-    },
-    {
-      id: '6',
-      name: 'Orange Juice',
-      category: 'Drink',
-      price: 18000,
-      stock: 20,
-      image: 'https://images.pexels.com/photos/96974/pexels-photo-96974.jpeg?auto=compress&cs=tinysrgb&w=300',
-      status: 'active'
-    }
-  ]);
+  const [products, setProducts] = useState<Product[]>([]);
 
-  const [tables] = useState<Table[]>([
-    { id: '1', number: 1, seats: 2, status: 'empty' },
-    { id: '2', number: 2, seats: 4, status: 'active' },
-    { id: '3', number: 3, seats: 2, status: 'booked' },
-    { id: '4', number: 4, seats: 6, status: 'empty' },
-    { id: '5', number: 5, seats: 4, status: 'active' },
-    { id: '6', number: 6, seats: 2, status: 'empty' }
-  ]);
+  const [tables, setTables] = useState<Table[]>([]);
 
-  const [salesData] = useState<SalesData[]>([
-    { date: '2024-01-01', revenue: 2500000, transactions: 45 },
-    { date: '2024-01-02', revenue: 2800000, transactions: 52 },
-    { date: '2024-01-03', revenue: 3200000, transactions: 61 },
-    { date: '2024-01-04', revenue: 2900000, transactions: 48 },
-    { date: '2024-01-05', revenue: 3500000, transactions: 68 },
-    { date: '2024-01-06', revenue: 4100000, transactions: 75 },
-    { date: '2024-01-07', revenue: 3800000, transactions: 72 }
-  ]);
+  const [salesData, setSalesData] = useState<SalesData[]>([]);
 
-  const [paymentMethods] = useState<PaymentMethod[]>([
-    { id: '1', name: 'Cash', total: 15500000 },
-    { id: '2', name: 'Credit Card', total: 8200000 },
-    { id: '3', name: 'E-Wallet', total: 12300000 }
-  ]);
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
 
   const [currentOrder, setCurrentOrder] = useState<OrderItem[]>([]);
+  const [outlets, setOutlets] = useState<Outlet[]>([]);
+  const [orders, setOrders] = useState<OrderSummary[]>([]);
 
   const addToOrder = (product: Product, quantity: number = 1) => {
     const existingItem = currentOrder.find(item => item.productId === product.id);
@@ -138,11 +68,138 @@ export const usePOS = () => {
     return currentOrder.reduce((total, item) => total + item.subtotal, 0);
   };
 
-  const outlets: Outlet[] = [
-    { id: '1', name: 'Main Store', status: 'open' },
-    { id: '2', name: 'Mall Branch', status: 'closed' },
-    { id: '3', name: 'Street Branch', status: 'open' }
-  ];
+  const checkout = async (paymentMethod: 'cash'|'card'|'ewallet' = 'cash') => {
+    if (currentOrder.length === 0) return null;
+    const payload = {
+      items: currentOrder.map(i => ({
+        productId: i.productId,
+        quantity: i.quantity,
+        subtotal: i.subtotal,
+      })),
+      discount: 0,
+      paymentMethod,
+    };
+    const order = await apiPost<Order>('/orders', payload);
+    // refresh list
+    try {
+      const list = await apiGet<OrderSummary[]>('/orders');
+      setOrders(list);
+    } catch {}
+    clearOrder();
+    return order;
+  };
+
+  const loadOrders = async () => {
+    const list = await apiGet<OrderSummary[]>('/orders');
+    setOrders(list);
+    return list;
+  };
+
+  const completeOrder = async (id: string) => {
+    const updated = await apiPut<OrderSummary>(`/orders/${id}/complete`);
+    setOrders(prev => prev.map(o => (o.id === id ? updated : o)));
+    return updated;
+  };
+
+  const deleteOrder = async (id: string) => {
+    await apiDelete(`/orders/${id}`);
+    setOrders(prev => prev.filter(o => o.id !== id));
+  };
+
+  const createProduct = async (payload: {
+    name: string;
+    category: string;
+    price: number;
+    stock: number;
+    image?: string;
+    status?: 'active' | 'inactive';
+  }) => {
+    const created = await apiPost<Product>('/products', payload);
+    setProducts(prev => [...prev, created]);
+    return created;
+  };
+
+  const updateProduct = async (
+    id: string,
+    patch: Partial<Pick<Product, 'name' | 'category' | 'price' | 'stock' | 'image' | 'status' | 'description'>>
+  ) => {
+    const updated = await apiPut<Product>(`/products/${id}`, patch);
+    setProducts(prev => prev.map(p => (p.id === id ? updated : p)));
+    return updated;
+  };
+
+  const deleteProduct = async (id: string) => {
+    await apiDelete(`/products/${id}`);
+    setProducts(prev => prev.filter(p => p.id !== id));
+  };
+
+  // Outlets CRUD
+  const createOutlet = async (payload: { name: string; status: 'open'|'closed' }) => {
+    const created = await apiPost<Outlet>('/outlets', payload);
+    setOutlets(prev => [...prev, created]);
+    return created;
+  };
+
+  const updateOutlet = async (id: string, patch: Partial<Outlet>) => {
+    const updated = await apiPut<Outlet>(`/outlets/${id}`, patch);
+    setOutlets(prev => prev.map(o => (o.id === id ? updated : o)));
+    if (currentOutlet.id === id) setCurrentOutlet(updated);
+    return updated;
+  };
+
+  const deleteOutlet = async (id: string) => {
+    await apiDelete(`/outlets/${id}`);
+    setOutlets(prev => prev.filter(o => o.id !== id));
+    if (currentOutlet.id === id && outlets[0]) setCurrentOutlet(outlets[0]);
+  };
+
+  // Tables CRUD
+  const createTable = async (payload: { number: number; seats: number; status: 'empty'|'booked'|'active' }) => {
+    const created = await apiPost<Table>('/tables', payload);
+    setTables(prev => [...prev, created]);
+    return created;
+  };
+
+  const updateTable = async (id: string, patch: Partial<Table>) => {
+    const updated = await apiPut<Table>(`/tables/${id}`, patch);
+    setTables(prev => prev.map(t => (t.id === id ? updated : t)));
+    return updated;
+  };
+
+  const deleteTable = async (id: string) => {
+    await apiDelete(`/tables/${id}`);
+    setTables(prev => prev.filter(t => t.id !== id));
+  };
+
+  useEffect(() => {
+    // Load initial data from backend
+    (async () => {
+      try {
+        const [prods, tbls, analytics, outs] = await Promise.all([
+          apiGet<Product[]>('/products'),
+          apiGet<Table[]>('/tables'),
+          apiGet<{ salesData: SalesData[]; paymentMethods: PaymentMethod[] }>(
+            '/analytics/stats'
+          ),
+          apiGet<Outlet[]>('/outlets'),
+        ]);
+        setProducts(prods);
+        setTables(tbls);
+        setSalesData(analytics.salesData);
+        setPaymentMethods(analytics.paymentMethods);
+        // prefer backend outlet 1 if available
+        setOutlets(outs);
+        const first = outs && outs[0];
+        if (first) setCurrentOutlet(first);
+      } catch (e) {
+        // In case backend unavailable, keep empty state (UI still renders)
+        // eslint-disable-next-line no-console
+        console.warn('Failed to load initial data', e);
+      }
+    })();
+  }, []);
+
+  // outlets are loaded from backend
 
   return {
     currentOutlet,
@@ -150,6 +207,7 @@ export const usePOS = () => {
     outlets,
     products,
     tables,
+    orders,
     salesData,
     paymentMethods,
     currentOrder,
@@ -157,6 +215,19 @@ export const usePOS = () => {
     removeFromOrder,
     updateOrderItem,
     clearOrder,
-    getOrderTotal
+    getOrderTotal,
+    checkout,
+    createProduct,
+    updateProduct,
+    deleteProduct,
+    createOutlet,
+    updateOutlet,
+    deleteOutlet,
+    createTable,
+    updateTable,
+    deleteTable,
+    loadOrders,
+    completeOrder,
+    deleteOrder
   };
 };

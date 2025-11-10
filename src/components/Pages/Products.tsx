@@ -4,13 +4,17 @@ import { Product } from '../../types';
 
 interface ProductsProps {
   products: Product[];
+  onCreateProduct?: (p: { name: string; category: string; price: number; stock: number; image?: string; status?: 'active'|'inactive' }) => Promise<Product>;
+  onUpdateProduct?: (id: string, patch: Partial<Product>) => Promise<Product>;
+  onDeleteProduct?: (id: string) => Promise<void>;
 }
 
-export const Products: React.FC<ProductsProps> = ({ products }) => {
+export const Products: React.FC<ProductsProps> = ({ products, onCreateProduct, onUpdateProduct, onDeleteProduct }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [saving, setSaving] = useState(false);
 
   const categories = ['All', ...Array.from(new Set(products.map(p => p.category)))];
   
@@ -28,6 +32,17 @@ export const Products: React.FC<ProductsProps> = ({ products }) => {
   const handleEditProduct = (product: Product) => {
     setEditingProduct(product);
     setShowAddModal(true);
+  };
+
+  const handleDelete = async (product: Product) => {
+    if (!onDeleteProduct) return;
+    if (!confirm(`Hapus produk ${product.name}?`)) return;
+    try {
+      setSaving(true);
+      await onDeleteProduct(product.id);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -138,7 +153,7 @@ export const Products: React.FC<ProductsProps> = ({ products }) => {
                       >
                         <Edit2 className="h-4 w-4" />
                       </button>
-                      <button className="text-red-600 hover:text-red-700">
+                      <button onClick={() => handleDelete(product)} className="text-red-600 hover:text-red-700" disabled={saving}>
                         <Trash2 className="h-4 w-4" />
                       </button>
                     </div>
@@ -159,13 +174,37 @@ export const Products: React.FC<ProductsProps> = ({ products }) => {
                 {editingProduct ? 'Edit Produk' : 'Tambah Produk Baru'}
               </h3>
               
-              <form className="space-y-6">
+              <form className="space-y-6" onSubmit={async (e) => {
+                e.preventDefault();
+                if (!onCreateProduct && !onUpdateProduct) return;
+                const form = e.currentTarget as HTMLFormElement;
+                const fd = new FormData(form);
+                const payload = {
+                  name: String(fd.get('name') || ''),
+                  category: String(fd.get('category') || ''),
+                  price: Number(fd.get('price') || 0),
+                  stock: Number(fd.get('stock') || 0),
+                  description: String(fd.get('description') || ''),
+                  status: 'active' as const,
+                };
+                try {
+                  setSaving(true);
+                  if (editingProduct && onUpdateProduct) {
+                    await onUpdateProduct(editingProduct.id, payload);
+                  } else if (onCreateProduct) {
+                    await onCreateProduct(payload);
+                  }
+                  setShowAddModal(false);
+                } finally {
+                  setSaving(false);
+                }
+              }}>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Nama Produk
                     </label>
-                    <input
+                    <input name="name"
                       type="text"
                       defaultValue={editingProduct?.name}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
@@ -177,7 +216,7 @@ export const Products: React.FC<ProductsProps> = ({ products }) => {
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Kategori
                     </label>
-                    <select
+                    <select name="category"
                       defaultValue={editingProduct?.category}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                     >
@@ -193,7 +232,7 @@ export const Products: React.FC<ProductsProps> = ({ products }) => {
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Harga
                     </label>
-                    <input
+                    <input name="price"
                       type="number"
                       defaultValue={editingProduct?.price}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
@@ -205,7 +244,7 @@ export const Products: React.FC<ProductsProps> = ({ products }) => {
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Stok
                     </label>
-                    <input
+                    <input name="stock"
                       type="number"
                       defaultValue={editingProduct?.stock}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
@@ -218,7 +257,7 @@ export const Products: React.FC<ProductsProps> = ({ products }) => {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Deskripsi
                   </label>
-                  <textarea
+                  <textarea name="description"
                     defaultValue={editingProduct?.description}
                     rows={3}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
@@ -237,18 +276,9 @@ export const Products: React.FC<ProductsProps> = ({ products }) => {
                 </div>
 
                 <div className="flex justify-end space-x-4 pt-6 border-t border-gray-200">
-                  <button
-                    type="button"
-                    onClick={() => setShowAddModal(false)}
-                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
-                  >
-                    Batal
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
-                  >
-                    {editingProduct ? 'Update' : 'Simpan'}
+                  <button type="button" onClick={() => setShowAddModal(false)} className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">Batal</button>
+                  <button type="submit" disabled={saving} className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-gray-300">
+                    {saving ? 'Menyimpan...' : (editingProduct ? 'Update' : 'Simpan')}
                   </button>
                 </div>
               </form>

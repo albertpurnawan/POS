@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Minus, Trash2, ShoppingCart, CreditCard } from 'lucide-react';
+import { Plus, Minus, Trash2, ShoppingCart, CreditCard, QrCode } from 'lucide-react';
 import { Product, OrderItem } from '../../types';
 
 interface CashierProps {
@@ -10,6 +10,8 @@ interface CashierProps {
   onRemoveFromOrder: (itemId: string) => void;
   onClearOrder: () => void;
   getOrderTotal: () => number;
+  checkout?: (method?: 'cash'|'card'|'ewallet') => Promise<any> | null;
+  completeOrder?: (id: string) => Promise<any>;
 }
 
 export const Cashier: React.FC<CashierProps> = ({
@@ -19,10 +21,14 @@ export const Cashier: React.FC<CashierProps> = ({
   onUpdateOrderItem,
   onRemoveFromOrder,
   onClearOrder,
-  getOrderTotal
+  getOrderTotal,
+  checkout,
+  completeOrder
 }) => {
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [qrDataUrl, setQrDataUrl] = useState<string>('');
+  const [lastOrderId, setLastOrderId] = useState<string | null>(null);
 
   const categories = ['All', ...Array.from(new Set(products.map(p => p.category)))];
   const filteredProducts = selectedCategory === 'All' 
@@ -35,11 +41,34 @@ export const Cashier: React.FC<CashierProps> = ({
     }
   };
 
-  const handlePayment = () => {
-    // Handle payment logic here
-    alert('Pembayaran berhasil!');
-    onClearOrder();
-    setShowPaymentModal(false);
+  const [paying, setPaying] = useState(false);
+  const handlePayment = async (method: 'cash'|'card'|'ewallet' = 'cash') => {
+    try {
+      setPaying(true);
+      let orderId: string | null = null;
+      if (checkout) {
+        const order = await checkout(method);
+        orderId = order?.id || null;
+      }
+      if (orderId && method === 'ewallet') {
+        setLastOrderId(orderId);
+        // fetch QR code for e-wallet
+        try {
+          const res = await fetch(`/api/payments/qr/${orderId}`);
+          if (res.ok) {
+            const json = await res.json();
+            setQrDataUrl(json.dataUrl);
+          }
+        } catch {}
+      }
+      if (method !== 'ewallet') alert('Pembayaran berhasil!');
+    } catch (e) {
+      alert('Gagal membuat pesanan');
+    } finally {
+      setPaying(false);
+      onClearOrder();
+      if (method !== 'ewallet') setShowPaymentModal(false);
+    }
   };
 
   return (
@@ -217,18 +246,51 @@ export const Cashier: React.FC<CashierProps> = ({
             </div>
             <div className="grid grid-cols-2 gap-3">
               <button
-                onClick={handlePayment}
+                onClick={() => handlePayment('cash')}
                 className="bg-green-600 text-white py-3 rounded-lg font-medium hover:bg-green-700"
               >
                 Cash
               </button>
               <button
-                onClick={handlePayment}
+                onClick={() => handlePayment('card')}
                 className="bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700"
               >
                 Card
               </button>
+              <button
+                onClick={() => handlePayment('ewallet')}
+                className="bg-indigo-600 text-white py-3 rounded-lg font-medium hover:bg-indigo-700 flex items-center justify-center space-x-2"
+              >
+                <QrCode className="h-5 w-5" />
+                <span>E-Wallet</span>
+              </button>
             </div>
+            {qrDataUrl && (
+              <div className="mt-4 text-center">
+                <p className="text-sm text-gray-600 mb-2">Scan untuk bayar:</p>
+                <img src={qrDataUrl} alt="QR Code" className="mx-auto w-48 h-48" />
+                <div className="mt-3 flex items-center justify-center space-x-2">
+                  <button
+                    onClick={async () => {
+                      if (!lastOrderId || !completeOrder) return;
+                      try {
+                        await completeOrder(lastOrderId);
+                        alert('Pembayaran berhasil dikonfirmasi');
+                        setQrDataUrl('');
+                        setLastOrderId(null);
+                        setShowPaymentModal(false);
+                      } catch {
+                        alert('Gagal konfirmasi pembayaran');
+                      }
+                    }}
+                    className="px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700"
+                  >
+                    Tandai Lunas
+                  </button>
+                  <button onClick={() => { setQrDataUrl(''); setLastOrderId(null); setShowPaymentModal(false); }} className="px-4 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300">Tutup</button>
+                </div>
+              </div>
+            )}
             <button
               onClick={() => setShowPaymentModal(false)}
               className="w-full mt-3 bg-gray-200 text-gray-700 py-2 rounded-lg font-medium hover:bg-gray-300"

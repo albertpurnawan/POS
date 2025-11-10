@@ -39,7 +39,18 @@ export interface Order {
   total: number;
   tableId?: string;
   status: 'pending' | 'completed' | 'cancelled';
-  createdAt: Date;
+  createdAt: string;
+}
+
+// Summary type for orders returned by backend list endpoints
+export interface OrderSummary {
+  id: string;
+  subtotal: number;
+  discount: number;
+  total: number;
+  tableId?: string;
+  status: 'pending' | 'completed' | 'cancelled';
+  created_at: string;
 }
 
 export interface Table {
