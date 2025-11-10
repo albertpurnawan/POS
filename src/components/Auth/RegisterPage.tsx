@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { Coffee, Eye, EyeOff, Loader2 } from 'lucide-react';
 
-interface LoginPageProps {
-  onLogin: (email: string, password: string) => Promise<boolean>;
+interface RegisterPageProps {
+  onRegister: (name: string, email: string, password: string) => Promise<boolean>;
   isLoading: boolean;
-  onSwitchToRegister?: () => void;
+  onSwitchToLogin: () => void;
 }
 
-export const LoginPage: React.FC<LoginPageProps> = ({ onLogin, isLoading, onSwitchToRegister }) => {
+export const RegisterPage: React.FC<RegisterPageProps> = ({ onRegister, isLoading, onSwitchToLogin }) => {
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -16,17 +17,12 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin, isLoading, onSwit
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-
-    if (!email || !password) {
-      setError('Email dan password harus diisi');
+    if (!name || !email || !password) {
+      setError('Semua field wajib diisi');
       return;
     }
-
-    try {
-      await onLogin(email, password);
-    } catch (err) {
-      setError('Login gagal. Periksa email dan password Anda.');
-    }
+    const ok = await onRegister(name, email, password);
+    if (!ok) setError('Registrasi gagal. Coba lagi.');
   };
 
   return (
@@ -39,38 +35,44 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin, isLoading, onSwit
               <Coffee className="h-8 w-8 text-white" />
             </div>
             <h1 className="text-2xl font-bold text-gray-900 mb-2">POS Pro</h1>
-            <p className="text-gray-600">Masuk ke dashboard Anda</p>
+            <p className="text-gray-600">Buat akun baru</p>
           </div>
 
-          {/* Login Form */}
+          {/* Register Form */}
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                Email / Username
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Nama Lengkap</label>
               <input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
-                placeholder="Masukkan email Anda"
+                placeholder="Masukkan nama"
                 disabled={isLoading}
               />
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-                Password
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
+                placeholder="name@example.com"
+                disabled={isLoading}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
               <div className="relative">
                 <input
-                  id="password"
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors pr-12"
-                  placeholder="Masukkan password Anda"
+                  placeholder="Minimal 6 karakter"
                   disabled={isLoading}
                 />
                 <button
@@ -98,24 +100,18 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin, isLoading, onSwit
               {isLoading ? (
                 <Loader2 className="h-5 w-5 animate-spin" />
               ) : (
-                'Masuk'
+                'Buat Akun'
               )}
             </button>
+
+            <p className="text-sm text-gray-600 text-center">
+              Sudah punya akun?{' '}
+              <button type="button" onClick={onSwitchToLogin} className="text-indigo-600 hover:underline">Masuk</button>
+            </p>
           </form>
-
-          {/* Demo credentials */}
-          <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-            <p className="text-sm text-gray-600 font-medium mb-2">Demo Account:</p>
-            <p className="text-xs text-gray-500">Email: demo@pos.com</p>
-            <p className="text-xs text-gray-500">Password: password123</p>
-          </div>
-
-          <div className="mt-4 text-center text-sm text-gray-600">
-            Belum punya akun?{' '}
-            <button type="button" className="text-indigo-600 hover:underline" onClick={onSwitchToRegister}>Daftar</button>
-          </div>
         </div>
       </div>
     </div>
   );
 };
+

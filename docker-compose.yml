@@ -21,7 +21,7 @@ services:
     image: ${BACKEND_IMAGE:-your-dockerhub-username/pos-backend}
     container_name: ${BACKEND_NAME:-pos-backend}
     ports:
-      - "${BACKEND_PORT:-4000}:4000"
+      - "${BACKEND_PORT:-33001}:80"
     restart: unless-stopped
     environment:
       # Database connection (override as needed to match your backend)
@@ -31,7 +31,7 @@ services:
       DB_USER: ${POSTGRES_USER:-pos}
       DB_PASSWORD: ${POSTGRES_PASSWORD:-pospass}
       DATABASE_URL: ${DATABASE_URL:-postgresql://${POSTGRES_USER:-pos}:${POSTGRES_PASSWORD:-pospass}@db:5432/${POSTGRES_DB:-pos}}
-      PORT: 4000
+      PORT: 80
       NODE_ENV: production
       JWT_SECRET: ${JWT_SECRET:-change-me}
     networks:

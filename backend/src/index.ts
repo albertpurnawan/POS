@@ -17,7 +17,12 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-app.get('/health', (_req, res) => {
+app.get('/health', (_req: any, res: { json: (arg0: { status: string; uptime: number; }) => void; }) => {
+  res.json({ status: 'ok', uptime: process.uptime() });
+});
+
+// Health under /api for reverse proxies that route only /api/* to backend
+app.get('/api/health', (_req: any, res: { json: (arg0: { status: string; uptime: number; }) => void; }) => {
   res.json({ status: 'ok', uptime: process.uptime() });
 });
 

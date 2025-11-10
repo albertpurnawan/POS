@@ -34,3 +34,17 @@ Frontend integration
 - Orders: create at `/api/orders`
 
 # POS
+
+Production with Caddy
+- A `Caddyfile` and `docker-compose.prod.caddy.yml` are included for TLS + domain routing.
+- Requirements:
+  - DNS A record for your `DOMAIN` pointing to the server IP
+  - Open ports 80/443 to the server
+- Steps:
+  - Set `DOMAIN` and `ACME_EMAIL` in `.env.compose` (see `.env.compose.example`). Ensure `VITE_API_URL` is unset so frontend calls `/api` relatively.
+  - Bring up prod with Caddy:
+    - `docker compose -f docker-compose.prod.yml -f docker-compose.prod.caddy.yml --env-file .env.compose up -d --build`
+  - Caddy will proxy:
+    - `/api*` to `backend:4000`
+    - everything else to `frontend:80`
+  - Frontend should use relative `/api` calls.

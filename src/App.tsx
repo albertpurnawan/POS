@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from './hooks/useAuth';
 import { usePOS } from './hooks/usePOS';
 import { LoginPage } from './components/Auth/LoginPage';
+import { RegisterPage } from './components/Auth/RegisterPage';
 import { Sidebar } from './components/Layout/Sidebar';
 import { Topbar } from './components/Layout/Topbar';
 import { Dashboard } from './components/Pages/Dashboard';
@@ -13,7 +14,7 @@ import { Settings } from './components/Pages/Settings';
 import { Orders } from './components/Pages/Orders';
 
 function App() {
-  const { user, isLoading, login, logout, isAuthenticated } = useAuth();
+  const { user, isLoading, login, logout, isAuthenticated, showRegister, setShowRegister, register } = useAuth();
   const posData = usePOS();
   
   const [currentPage, setCurrentPage] = useState('dashboard');
@@ -117,7 +118,11 @@ function App() {
   };
 
   if (!isAuthenticated) {
-    return <LoginPage onLogin={login} isLoading={isLoading} />;
+    return showRegister ? (
+      <RegisterPage onRegister={register} isLoading={isLoading} onSwitchToLogin={() => setShowRegister(false)} />
+    ) : (
+      <LoginPage onLogin={login} isLoading={isLoading} onSwitchToRegister={() => setShowRegister(true)} />
+    );
   }
 
   return (
